@@ -2,6 +2,7 @@
 # Author: Mike Pearmain.
 # Author: Nick Mihailovski.
 # Author: Nicolas Remy.
+# Contributor: Vignesh Prajapati.
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,13 +50,16 @@ QueryBuilder <- function() {
   # # do not need to specify it in the construction or simply place it as NULL.
   #
   # # query <- QueryBuilder()
-  # # query$Init(start.date = "2010-05-01",
-  # #            end.date   = "2010-08-20",
-  # #            dimensions = "ga:date",
-  # #            metrics    = "ga:visits",
-  # #            sort       = "ga:date",
-  # #            table.id   = "ga:30661272")
-  # # ga.data <- ga$GetRDataFromQuery(query)
+  # Build the query string 
+  # query$Init(start.date = "2012-06-18",
+  #  # end.date = "2012-12-18",
+  #  # dimensions = "ga:date, ga:pagePath",
+  #  # metrics = "ga:visits, ga:pageviews, ga:timeOnPage",
+  #  # sort = "ga:visits",
+  #  # max.results = 99,
+  #  # table.id = paste("ga:", ga.profiles$id[1], sep="", collapse=","),
+  #  # access_token=access_token)
+
 
   # Constants.
   kMaxDimensions <- 7
@@ -63,17 +67,18 @@ QueryBuilder <- function() {
   kMaxTableIds <- 1
 
   # Query parameters.
-  start.date  <- NULL
-  end.date    <- NULL
-  dimensions  <- NULL
-  metrics     <- NULL
-  segment     <- NULL
-  sort        <- NULL
-  filters     <- NULL
-  max.results <- NULL
-  start.index <- NULL
-  table.id    <- NULL
-
+  start.date   <- NULL
+  end.date     <- NULL
+  dimensions   <- NULL
+  metrics      <- NULL
+  segment      <- NULL
+  sort         <- NULL
+  filters      <- NULL
+  max.results  <- NULL
+  start.index  <- NULL
+  profile.id   <- NULL
+  access_token <- NULL
+   
   StartDate <- function(start.date.param = NA) {
     # Sets the start date.
     # Optional.
@@ -94,11 +99,10 @@ QueryBuilder <- function() {
     #
     #  Returns:
     #    The start.date value if start.date.param is not set.
-
     # Un-set the parameter if the value NULL is used.
     if (is.null(start.date.param)) {
-      start.date <<- NULL
-      return(invisible())
+    start.date <<- NULL
+    return(invisible())
     }
 
     # Returns the current dimension value if no parameter is used.
@@ -115,9 +119,9 @@ QueryBuilder <- function() {
     start.date <<- start.date.param
     return(invisible())
   }
-
+  
   EndDate <- function(end.date.param = NA) {
-    # Sets the end date.
+   # Sets the end date.
     # Optional.
     # All Analytics feed requests must specify a beginning and ending date
     # range. If you do not indicate start- and end-date values for the
@@ -157,6 +161,7 @@ QueryBuilder <- function() {
     return(invisible())
   }
 
+  
   Dimensions <- function(dimensions.param = NA) {
     # Sets the dimensions.
     # Optional.
@@ -230,7 +235,7 @@ QueryBuilder <- function() {
     return(invisible())
   }
 
-  Metrics <- function(metrics.param = NA) {
+    Metrics <- function(metrics.param = NA) {
     # Sets the metrics of interest (clicks, pageviews, etc)
     # Optional.
     # The aggregated statistics for user activity in a profile, such as
@@ -256,6 +261,7 @@ QueryBuilder <- function() {
     # calculations based on aggregate metrics.
     #
     # NOTE: We do check for valid metrics.
+    #
     #
     # Args:
     #   metrics.param: A vector of up to 10 dimensions, either as
@@ -304,7 +310,7 @@ QueryBuilder <- function() {
     metrics <<- paste(metrics.param, collapse = ",")
     return(invisible())
   }
-
+  
   Segment <- function(segment.param = NA) {
     # Sets the segments, see dxp:segment in the Account Feed Response section
     # in the GA literature online.
@@ -339,7 +345,6 @@ QueryBuilder <- function() {
     # Example:
     # gaid::10
     # dynamic::ga:medium==referral
-    #
     # Args:
     #   segment: An advanced segment definition to slice and dice your
     #            Analytics data. If NULL is used, the segment parameter will be
@@ -363,8 +368,8 @@ QueryBuilder <- function() {
     segment <<- segment.param
     return(invisible())
   }
-
-  Sort <- function(sort.param = NA) {
+  
+   Sort <- function(sort.param = NA) {
     # Sets the sorting criteria.
     # Optional.
     # Indicates the sorting order and direction for the returned data.
@@ -429,7 +434,7 @@ QueryBuilder <- function() {
     sort <<- paste(sort.param, collapse = ",")
     return(invisible())
   }
-
+  
   Filters <- function(filters.param = NA) {
     # Sets the filters used.
     # Optional.
@@ -516,15 +521,17 @@ QueryBuilder <- function() {
     max.results <<- max.results.param
     return(invisible())
   }
-
+  
   StartIndex <- function(start.index.param = NA) {
-    # Sets the starting index from where to return results from.
+    # Sets the table id for a user.
     # Optional.
-    # If not supplied, the starting index is 1. (Feed indexes are 1-based.
-    # That is, the first entry is entry 1, not entry 0.) Use this parameter
-    # as a pagination mechanism along with the max-results parameter for
-    # situations when totalResults exceeds 10,000 and you want to retrieve
-    # entries indexed at 10,001 and beyond.
+    # The unique table ID used to retrieve the Analytics Report data. This
+    # ID is provided by the <ga:table.id> element for each entry in the
+    # account feed. We run a series of checks that the form of the data is
+    # being correctly entered.
+    #
+    # NOTE: This function does not test the table.id is valid from the account
+    #       profile.
     #
     # Args:
     #   start.index.param: The starting point of pagination for results to be
@@ -561,7 +568,7 @@ QueryBuilder <- function() {
     start.index <<- start.index.param
     return(invisible())
   }
-
+  
   TableID <- function(table.id.param = NA) {
     # Sets the table id for a user.
     # Optional.
@@ -637,6 +644,9 @@ QueryBuilder <- function() {
     if (is.null(table.id)) {
       missing.params <- append(missing.params, "table.id")
     }
+	if (is.null(access_token)) {
+      missing.params <- append(missing.params, "access_token")
+    }
 
     if (length(missing.params) == 0) {
       return(TRUE)
@@ -645,13 +655,16 @@ QueryBuilder <- function() {
     stop(paste("All GA queries must have", missing.string, "parameters.",
                sep = " "))
   }
-
+  
   ToUri <- function() {
-    # Returns the URI constructed from the parameter settings.
+    # Returns the URI constructed from the parameter settings. This also
+    # URI-encodes all the values in each query parameter.
     #
     # Returns:
-    #   A full URI that can be processed, by the
-    #   RGoogleAnalytics$GetReportData() function.
+    #   A full URI that can be used with the Google Analytics API. Users
+    #   typically don't need to use this method as the
+    #   RGoogleAnalytics$GetReportData() function accepts an entire
+    #   QueryBuilder object.
 
     query <- c("start.date"  = start.date,
                "end.date"    = end.date,
@@ -662,9 +675,10 @@ QueryBuilder <- function() {
                "filters"     = filters,
                "max.results" = max.results,
                "start.index" = start.index,
-               "table.id"    = table.id)
+               "table.id"    = table.id,
+			   "access_token" = access_token)
 
-    uri <- "https://www.google.com/analytics/feeds/data?"
+    uri <- "https://www.googleapis.com/analytics/v3/data/ga?"
     for (name in names(query)) {
       uri.name <- switch(name,
                          start.date  = "start-date",
@@ -676,19 +690,25 @@ QueryBuilder <- function() {
                          filters     = "filters",
                          max.results = "max-results",
                          start.index = "start-index",
-                         table.id    = "ids")
-
+                         table.id    = "ids",
+                         access_token = "access_token")
 
       if (!is.null(uri.name)) {
-        uri <- paste(uri, uri.name, "=", query[[name]], "&", sep = "")
+        uri <- paste(uri,
+                     uri.name,
+                     "=",
+                     curlEscape(query[[name]]),
+                     "&",
+                     sep = "",
+                     collapse= "")
+        }
       }
-    }
     # remove the last '&' that joins the query parameters together.
     uri <- sub("&$", "", uri)
     return(uri)
   }
 
-  ClearData <- function() {
+   ClearData <- function() {
     # A function to reset all the data values to NULL, for a new query.
     # The ClearData() function allows a user to reset the query parameters,
     # (start.date, metrics, etc) back to NULL.
@@ -707,7 +727,38 @@ QueryBuilder <- function() {
     table.id    <<- NULL
     return(invisible())
   }
+    
+  AccessToken <- function(access_token.param = NULL) {
+    # Checks whether a valid authorization token exists.
+    #
+    # Returns:
+    #   A stop call if the access_token is not valid or not present.
+    if (is.null(access_token.param)) {
+      access_token <<- NULL
+      return(invisible())
+    }
 
+    # Returns the current value if no parameter is used.
+    if (is.na(access_token.param)) {
+      return(access_token)
+    }
+
+    # Error Handling.
+    # A table.id must be character.
+    if (!is.character(access_token.param)) {
+      stop("not in character")
+    }
+
+    # Error handling.
+    # Check the input is that of type vector.
+    if (!is.vector(access_token.param)) {
+      stop(paste("access_token must be a vector"))
+    }
+
+    access_token <<- access_token.param
+    return(invisible())
+  }
+  
   Init <- function(start.date  = NULL,
                    end.date    = NULL,
                    dimensions  = NULL,
@@ -717,12 +768,14 @@ QueryBuilder <- function() {
                    filters     = NULL,
                    max.results = NULL,
                    start.index = NULL,
-                   table.id    = NULL) {
+                   table.id    = NULL,
+		   access_token= NULL) {
+				   
     # A function setting initial values of a GA URI query.
     #
     # Args:
     #  start.date: See QueryBuilder()
-    #  end.date: See QueryBuilder()
+    #  end.date: See QueryBuilder()	
     #  dimensions: See QueryBuilder()
     #  metrics: See QueryBuilder()
     #  segment: See QueryBuilder()
@@ -731,6 +784,7 @@ QueryBuilder <- function() {
     #  max.results: See QueryBuilder()
     #  start.index: See QueryBuilder()
     #  table.id: See QueryBuilder()
+    #  access_token: See AccessToken()
     #
     # Returns:
     #   Sets the initial query parameters.
@@ -745,21 +799,54 @@ QueryBuilder <- function() {
     MaxResults(max.results)
     StartIndex(start.index)
     TableID(table.id)
+    AccessToken(access_token)
     return(invisible())
   }
-
-  return(list("start.date"  = StartDate,
-              "end.date"    = EndDate,
-              "dimensions"  = Dimensions,
-              "metrics"     = Metrics,
-              "segment"     = Segment,
-              "sort"        = Sort,
-              "filters"     = Filters,
-              "max.results" = MaxResults,
-              "start.index" = StartIndex,
-              "table.id"    = TableID,
-              "to.uri"      = ToUri,
-              "clear.data"  = ClearData,
-              "validate"    = Validate,
-              "Init"        = Init))
+  	
+  Authorize <- function() {
+    # This function will authorize the user account with the Oauth 2.0 API. 
+    # This function redirect a user to a browser with Oauth 2.0 login prompt, 
+    # A user needs to allow the access to use this service by Exchanging an
+    # authorization code for a token.
+    # One must then paste the generated access token from Oauth 2.0 console 
+    # to the R console.
+	
+    browseURL(paste("https://accounts.google.com/o/oauth2/auth?scope=",
+                    "https://www.googleapis.com/auth/analytics.readonly&",
+                    "response_type=code&access_type=offline&redirect_uri=",
+                    "https://developers.google.com/oauthplayground&approval",
+                    "_prompt=force&client_id=407408718192.apps.",
+                    "googleusercontent.com&hl=en&from_login=1&as=",
+	            "7886e0e26859b9a5&pli=1&authuser=0",
+                    sep=""))
+	
+    cat("The GA data extraction process required access token.",
+	"To accept the accesstoken from Oauth 2.0 Playground, you need",
+        "to follow certain steps in your browser. This access token will be",
+	"valid untill an hour only.\n\nSteps to be followed : \n1. Authorize your",
+	"Google Analytics account by providing email and password. \n2. On left",
+	"side of the scrren click on the button","'Exchange authorization code for",
+	"tokens' to generate the access token. \n3. Copy the generated access",
+	"token and paste it here.")
+    access_token <- readline(as.character(cat("\n\nPaste the access token here",
+	                                      ":=>")))
+    return(access_token)
+  }
+	
+  return(list("start.date"     =   StartDate,
+                "end.date"     =   EndDate,
+		"dimensions"   =   Dimensions,
+		"metrics"      =   Metrics,
+                "segment"      =   Segment,
+                "sort"         =   Sort,
+                "filters"      =   Filters,
+                "max.results"  =   MaxResults,
+                "start.index"  =   StartIndex,
+                "table.id"     =   TableID,
+                "to.uri"       =   ToUri,   
+                "clear.data"   =   ClearData,
+                "validate"     =   Validate,
+	        "access_token" =   AccessToken,			  
+                "Init"         =   Init,
+                "authorize"    =   Authorize))
 }
