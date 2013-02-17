@@ -1,408 +1,333 @@
-# Copyright 2010 Google Inc. All Rights Reserved.
-# Author: Mike Pearmain.
-# Author: Nick Mihailovski.
-# Author: Nicolas Remy.
-
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-# This script allows to use the Google Analytics (GA) API to read data
-# directly from GA into R as a data.frame.
-# As of now this script allows you to:
-#   - Create a new export object.
-#   - Authenticate with your Google Account.
-#   - Return an account profile for an authorised Google Account.
-#   - Create a new API query
-#   - Use the query to return a data.frame populated with metrics.
-# It requires the RCurl and XML packages.
-# These packages can be downloaded from http://www.omegahat.org/R
-# using the following command,
-# 'install.packages('RCurl', repos = "http://www.omegahat.org/R")'
-# 'install.packages('XML', repos = "http://www.omegahat.org/R")'
-#
-# If errors occur when downloading 'Rcurl' or XML' packages ensure the libcurl
-# and libxml libraries are up to date on the Linux machine.
-# 'sudo apt install libxml2-dev'
-# 'sudo apt install libcurl4-gnutls-dev'
-#
-# A QueryBuilder.R script is also available as set of helper functions for
-# constructing GA uri queries.
-
-library(RCurl)
-library(XML)
-
-# R functions to load data,
-
 RGoogleAnalytics <- function() {
   # Creates a skeleton shell for accessing the Google Analytics API.
   #
   # Returns:
   #   Returns a list of methods, for accessing the Google Analytics API.
-  #   GetXmlDataFeed(),
-  #   GetRDataFromXML(),
-  #   SetCredentials(),
-  #   GetProfileXML(),
-  #   GetProfileData(),
-  #   GetReportData(),
-  #   For more information please look at the help pages for each function.
-  #
+  #           GetProfileData()       
+  #           GetReportData()      
+  #           GetAcctDataFeedJSON() 
+  #			  GetProfilesFromJSON()  
+  #	          ParseApiErrorMessage() 
+  #	 		  ParseDataFeedJSON()    
+  #			  kMaxDefaultRows()      
+  # For more information please look at the help pages for each function.
   # Examples:
-  #   ga <- RGoogleAnalytics()
-  #   ga$SetCredentials("INSERT_USER_NAME", "INSERT_PASSWORD")
-  #   # Get the list of different profiles, to help build the query.
-  #   prof <- ga$GetProfileData()
-  #   # Build the query.
-  #   query.builder <- QueryBuilder()
-  #   query.builder$Init(start.date = "2010-05-01",
-  #                      end.date   = "2010-08-20",
-  #                      dimensions = "ga:date",
-  #                      metrics    = "ga:visits",
-  #                      sort       = "ga:date",
-  #                      table.id   = "ga:30661272")
-  #   ga.data <- ga$GetReportData(query.builder)
-  #   # Look at the data returned.
-  #   head(ga.data$data)
+  # Step: 1. Authorize your account and paste the accesstoken 
+  #    query <- QueryBuilder()
+  #    access_token <- query$authorize()    					 
+  # Step: 2. Create a new Google Analytics API object
+  #	   ga <- RGoogleAnalytics()
+  #    ga.profiles <- ga$GetProfileData(access_token)
+  #    
+  #    # To List the GA profiles 
+  #    ga.profiles
+  # Step: 3. Build the query string, use the profile by setting its index value 
+  #    query$Init(start.date = "2011-06-18",
+  #    end.date = "2012-12-18",
+  #    dimensions = "ga:date, ga:pagePath",
+  #    metrics = "ga:visits, ga:pageviews, ga:timeOnPage",
+  #    sort = "ga:visits",
+  #    #filters = "",
+  #    #segment = "",
+  #    max.results = 1012,
+  #    table.id = paste("ga:", ga.profiles$id[1], sep="", collapse=","),
+  #    access_token = access_token)
+  # Step: 4. Make a request to get the data from the API
+  #    ga.data <- ga$GetReportData(query)
+  # Step: 5. Look at the returned data
+  #    head(ga.data)
 
-  # Private members.
-  # We set the authorization token to ensure the user can access the profile
-  # information, and retrieve data.
-  # We explicitly avoiding storing the user name and password for security
-  # reasons. The Auth token is valid for 14 days.
-  auth.token <- NULL
+  # Constant 
+  kMaxDefaultRows <- 10000 
+  kMaxPages <- 100
+  
+  # We have used oauth 2.0 API to authorize the user account 
+  # and to get the accesstoken to request to the Google Analytics Data API. 
+  # The accesstoken is valid for 1 hour. 
+  # A user needs to regenerate the accesstoken after one hour.
+  query.uri <- NULL
+  dataframe.param <- data.frame()
 
-  SetCredentials <- function(user, pass) {
-    # Fetches the GA Auth Token for a user with a password.
-    # Fetches GA authentication token, which can then be used to fetch data,
-    # Technically works by submitting the information to the API and storing the
-    # account information in gtoken, we then return the 'Auth' entry token.
-    # As mentioned above we don't keep the user name or passwords for security
-    # reasons.
-    #
-    # Args:
-    #   user: A valid user name for a GA account.
-    #   pass: A valid password for the GA account.
-    # Returns:
-    #   Returns the authentication token of the users account.
-
-    # Error handling.
-    # Ensure that both user name and password have been entered.
-    if (is.null(user) || is.null(pass)) {
-      stop("Please supply a user name and password")
-    }
-
-    auth.resp <- postForm("https://www.google.com/accounts/ClientLogin",
-                          Email = user,
-                          Passwd = pass,
-                          accountType = "GOOGLE",
-                          source = "r-google-analytics",
-                          service = "analytics")
-    gtoken <- unlist(strsplit(auth.resp, "\n"))
-    parsed.gtoken <- unlist(strsplit(gtoken[3], "Auth="))
-    if (length(parsed.gtoken) >= 2) {
-      auth.token <<- unlist(strsplit(gtoken[3], "Auth="))[[2]]
+  # Set the curl options		
+  options(RCurlOptions = list(capath = system.file("CurlSSL",
+                                                   "cacert.pem", 
+                                                   package = "RCurl"),
+                             ssl.verifypeer = FALSE))
+  
+  ValidateToken <- function(access.token) {
+    # This function will check whether the provided access_token is valid or 
+    # expired. If it is a valid access token then it will return itself,
+    # otherwise stop the execution.
+    #  Args: 
+    #    access.token: the token generated by Oauth 2.0 API to 
+    #                  authorize the user account for Google Analytics 
+    #                  data extraction.
+    #  Returns: 
+    #       access.token:
+    api.response.json <- getURL(paste("https://www.googleapis.com/oauth2/v1/",
+                                      "tokeninfo?access_token=",
+                                      access.token,
+                                      sep = "",
+                                      collapse = ","))
+    api.response.list <- fromJSON(api.response.json, method = 'C')	
+    check.token.param <- regexpr("error", api.response.json)
+    if (check.token.param[1] != -1) {
+      stop(paste("Invalid/Expired access_token, regenerate",
+                 "token by 'access_token <- query$authorize()'"))
     } else {
-      stop("Authentication failed.")
+      return(access.token)
+    }		
+  }
+  
+  SetDataFrame <- function(GA.list.param.columnHeaders, dataframe.param) {
+    # To prepare the dataframe by applying the column names and column datatypes 
+    # to the provided data frame.
+    #  Args:
+    #    GA.list.param.columnHeaders: list includes GA reponse 
+    #                                 data column name, column datatype.
+    #    dataframe.param: The reponse data(dimensions and metrics data rows)
+    #                     packed in dataframe without the column names and 
+    #                     column types.
+    # 
+    #  Returns:
+    #    dataframe.param : The dataframe attached with the column  names and 
+    #    column datatype as per type the Dimnesions and metrics
+  
+    column.param <- t(sapply(GA.list.param.columnHeaders, 
+     	                      '[',
+                              1 : max(sapply(GA.list.param.columnHeaders,
+                                             length))))
+    col.name <- gsub('ga:', '', as.character(column.param[, 1]))
+    col.datatype <- as.character(column.param[, 3])
+    colnames(dataframe.param) <- col.name
+			
+    dataframe.param <- as.data.frame(dataframe.param)
+    dataframe.param <- SetColDataType(col.datatype, col.name, dataframe.param)
+						
+    return(dataframe.param)
+  }
+			
+  SetColDataType <- function(col.datatype, col.name, dataframe.param) {
+    # This will set the appropriate data type to the each column of the 
+    # provided dataframe.
+    # Args: 
+    #   col.datatype: The vector of the datatype of all the dimensions and 
+    #                 metrics from the parsed list data.
+    #   col.name:  The vector of the name of the all dimensions and metrics 
+    #              of the retrived data and it will be attached to the 
+    #              dataframe.param.
+    # Returns:
+    #   dataframe.param: The dataframe will be set with its column names with
+    #   the appropriate class type.
+    for(i in 1:length(col.datatype)) {
+      if (col.datatype[i]=="STRING") {
+        dataframe.param[, i] <- as.character(dataframe.param[, i]) 
+      } else {
+	dataframe.param[, i] <- as.numeric(as.character(dataframe.param[, i])) 
+      }
+    }
+    return(dataframe.param)
+  }
+  
+  GetProfilesFromJSON <- function(api.response.json) {
+    # This function will do the parsing operation on the JSON reponse 
+    # returned from the Google Management API and return the
+    # dataframe stored with the profile id and prfile name
+    # Args:
+    #   api.reponse.json: The Json response from GetProfileData function 
+    #                     which will request to the Google Management API.
+    # Returns:
+    #   Profileres.list: The list stored with totalResults as value of the 
+    #                    total available data rows and profiles as the R 
+    #                    dataframe object with two columns as column id and 
+    #                    column name.			   
+    GA.profiles <- ParseApiErrorMessage(api.response.json)
+    TotalProfiles <- GA.profiles$totalResults
+    if (!is.null(GA.profiles$code)) {
+      stop(paste("code: ",
+                 GA.profiles$code,
+                 "Reason: ",
+                 GA.profiles$message))
     }
 
-    return(invisible())
-  }
-
-  CheckAuthToken <- function() {
-    # A Check to see if there is a valid authorization token.
-    # We test for the presence of the authorization token at various points in
-    # the code. The SetCredentials function sets the global auth.token on
-    # assignment, so this checks the presence of the variable.
-    #
-    # Returns:
-    #   A stop call if the auth.token has not been retrieved.
-    if (is.null(auth.token))
-      stop("Please enter the user name and password in SetCredentials")
-  }
-
-  GetAnyXMLAttribute <- function(vNode, attr.name) {
-    # Function to return the value attribute of the nodes of the parsed XML.
-    #
-    # Args:
-    #   vNode: The XML node to be inspected.
-    #   attr.name: The attribute to be returned.
-    # Returns:
-    #   The value contained with the XML node.
-    if (xmlName(vNode) == "metric")
-      return(as.numeric(xmlGetAttr(vNode, attr.name)))
-    else
-      return(xmlGetAttr(vNode, attr.name))
-  }
-
-  GetProfileXML <- function() {
-    # Returns a profile XML for an account
-    # For each authenticated user for a GA, they may have multiple accounts,
-    # We retrieve a raw XML of all the accounts an authenticated user has access
-    # to.
-    #
-    # Returns:
-    #   The raw XML string from the GA API.
-    CheckAuthToken()
-    google.auth <- paste("GoogleLogin auth=", auth.token)
-    profile.feed.list <-
-      getURL("https://www.google.com/analytics/feeds/accounts/default",
-             .encoding = 'UTF-8',
-             httpheader = c("Authorization" = google.auth,
-               "GData-Version" = 2))
-    return(profile.feed.list)
-  }
-
-  GetProfileData <- function(profile = GetProfileXML()) {
-    # A function to convert the profile XML into an R data.frame.
-    # We have the raw XML for a user profile from the GetProfileXML() function,
-    # we clean this information and place into a human readable table in R
-    # for consumption.  We also allow the user to pass in a string XML if
-    # required for offline inspection.
-    #
-    # Args:
-    #   profile: The XML string to be processed.
-    # Returns:
-    #   A list of the processed XML string comprising of the profile
-    #   as a data.frame and the number of accounts the profile has access to.
-
-    # Get XML data into an R object.
-    profile.feed.list <- profile
-    feed.xml <- xmlTreeParse(profile.feed.list,
-                             asText = TRUE,
-                             useInternalNode = TRUE)
-
-    # get namespaces of XML doc.
-    feed.name.space <- sapply(xmlNamespaceDefinitions(feed.xml),
-                              function(ns) ns$uri)
-    names(feed.name.space)[1] <- "ns"
-
-    # Return the total number of results available.
-    total.results <-
-      data.frame(unlist(xpathApply(feed.xml,
-                                   path = "//openSearch:totalResults",
-                                   xmlValue,
-                                   namespaces = feed.name.space)))
-    names(total.results) <- "total.results"
-
-    # Return the Table ID's from the account feed.
-    table.id.list <-
-      data.frame(unlist(xpathApply(feed.xml,
-                                   path = "//ns:entry/dxp:tableId",
-                                   xmlValue,
-                                   namespaces = feed.name.space)))
-
-    ns.path <- "//ns:entry/dxp:property[@name = 'ga:accountName']"
-    # Return the account name from the account feed.
-    table.account.list <-
-      data.frame(unlist(xpathApply(feed.xml,
-                                   path = ns.path,
-                                   GetAnyXMLAttribute,
-                                   "value",
-                                   namespaces = feed.name.space)))
-
-    # Return the profile name from the account feed.
-    table.profile.list <-
-      data.frame(unlist(xpathApply(feed.xml,
-                                   path = "//ns:entry/ns:title",
-                                   xmlValue,
-                                   namespaces = feed.name.space)))
-
-    # Join the data.frames and rename the variables.
-    profile <- cbind(table.account.list,
-                     table.profile.list,
-                     table.id.list)
-
-    names(profile) <- c("AccountName", "ProfileName", "TableId")
-
-    # We return the profiles and the results.
-    return(list(profile = profile,
-                total.results = total.results))
-  }
-
-  GetXMLDataFeed <- function(query) {
-    # Returns the data XML for a requested uri.
-    # This function uses the RCurl packages to pass the built uri
-    # query and authenticate the  Google Account being used.
-    #
-    # Args:
-    #   query: This is the uri query.
-    # Returns:
-    #  An XML string of the data returned from GA of the specified query.
-    CheckAuthToken()
-    # Get GA data Feed from API.
-    data.feed.uri <- query
-    google.auth <- paste("GoogleLogin auth=", auth.token)
-    feed.data <- getURL(data.feed.uri,
-                        .encoding = 'UTF-8',
-                        httpheader = c("Authorization" = google.auth,
-                          "GData-Version" = 2))
-    return(feed.data)
-  }
-
-  GetRDataFromXML <- function(xml.string) {
-    # A function to convert the XML data into an R data.frame.
-    # This function takes an XML string (GA schema) and processes the
-    # XML to return an R data.frame.
-    #
-    # Args:
-    #   xml.string: An XML string from matching the GA API schema.
-    # Returns:
-    #  A list of information extracted from the XML;
-    #  data: A data.frame of metric and/or dimension attributes and values, this
-    #        will include C.I's if over 500,000 entries.
-    #  aggr.totals: GA might match millions of rows of data, but the API will
-    #               only return a max of 10k rows at a time. Along with every
-    #               response, the API will return the aggregates of each metric
-    #               that was matched (not returned).
-    #  total.results: The total number of rows of data that GA matched.
-
-    # Error checking.
-    # Ensure the input is of character format.
-    if (!is.character(xml.string)) {
-      stop("xml.string must be a character string")
+    GA.profiles.param <- t(sapply(GA.profiles$items,
+                           '[',
+                           1 : max(sapply(GA.profiles$items, length)))) 
+    profiles.id <- as.character(GA.profiles.param[, 1])
+    profiles.name <- as.character(GA.profiles.param[, 7])
+    if (length(profiles.id)==0) {
+      stop("Please check the access token. It may be invalid or expired")
+    } else {
+      profiles <- data.frame(id=profiles.id,
+                             name=profiles.name,
+		             stringsAsFactors = FALSE)
+      profileres.list <- list(totalResults = TotalProfiles,
+                              profiles = profiles)
+      return(profileres.list)     
     }
-
-    feed.data = xml.string
-    # get XML data into an R object.
-    feed.xml <- xmlTreeParse(feed.data,
-                             asText = TRUE,
-                             useInternalNode = TRUE)
-
-    # get namespaces of XML doc.
-    feed.name.space <- sapply(xmlNamespaceDefinitions(feed.xml),
-                              function(ns) ns$uri)
-    names(feed.name.space)[1] <- "ns"
-
-    # get the titles of the dimensions and metrics.
-    titles <- unlist(xpathApply(feed.xml,
-                                "//ns:entry[1]/*[@name]",
-                                xmlGetAttr, "name",
-                                namespaces = feed.name.space))
-
-    # return the values of the titles as a data frame.
-    df.value <- data.frame(sapply(titles, function(name) {
-      unlist(xpathApply(feed.xml,
-                        paste("//ns:entry/dxp:*[@name='", name, "']",
-                              sep = ""),
-                        GetAnyXMLAttribute, "value",
-                        namespaces = feed.name.space))
-    }))
-
-    # get the names of the confidence interval on the metrics.
-    ci.check <- unlist(xpathApply(feed.xml,
-                                  "//ns:entry[1]/*[@confidenceInterval]",
-                                  xmlGetAttr, "name",
-                                  namespaces = feed.name.space))
-
-    # return the C.I of the metrics as a data frame.
-    df.ci <- data.frame(sapply(ci.check, function(name) {
-      unlist(xpathApply(feed.xml,
-                        paste("//ns:entry/dxp:*[@name='", name, "']",
-                              sep = ""),
-                        GetAnyXMLAttribute, "confidenceInterval",
-                        namespaces = feed.name.space))
-    }))
-    # Rename the variables to reflect C.I status.
-    # If the sum of all values is 0, remove
-    names(df.ci) <- sub("$", ".C.I", names(df.ci))
-    # join the C.I with the data frames if sum of col != 0
-    df <- cbind(df.value, df.ci[colSums(df.ci) != 0])
-
-    # get the names of the Aggregates on the metrics
-    aggr.check <- unlist(xpathApply(feed.xml,
-                                    "//dxp:aggregates/dxp:metric",
-                                    xmlGetAttr, "name",
-                                    namespaces = feed.name.space))
-
-    # return the values of the aggr as a data frame.
-    df.aggr <-
-      data.frame("aggregate.totals" = sapply(aggr.check, function(name) {
-        unlist(xpathApply(feed.xml,
-                          paste("//dxp:aggregates/dxp:*[@name='", name, "']",
-                                sep = ""),
-                          GetAnyXMLAttribute,
-                          "value",
-                          namespaces = feed.name.space))
-      }))
-    # return the total results.
-    # The total_results element of the feed, gives you the total numbers of
-    # entries (rows) of data that GA matched.
-    total.results <- unlist(xpathApply(feed.xml,
-                                       path = "//openSearch:totalResults",
-                                       xmlValue,
-                                       namespaces = feed.name.space))
-    names(total.results) <- "total.results"
-    total.results <- as.numeric(total.results)
-    return(list(data = df,
-                aggr.totals = df.aggr,
-                total.results = total.results))
-
+  }
+  
+  GetAcctDataFeedJSON <- function(query.uri) {
+    # This function will make a request to the Google Management API with
+    # the query prepared by the QueryBuilder() for retriving the GA Account
+    # data. 
+    # Args :
+    #   query.uri: The data feed query strig generated by the Query builder 
+    #              Class.
+    # Returns :
+    #   GA.Data: The response as account data feed in the JSON format.
+    access_token <- ValidateToken(access_token)	
+    GA.Data <- getURL(query.uri)
+    return(GA.Data)
+  }
+  
+  GetProfileData <- function(access_token) {
+    # This function will retrive the available profiles from your 
+    # Google anlaytics account by the Google Management API with the help of 
+    # the access token. 
+    # Args:	
+    #   access_token: To authorize the user account.
+    # Returns:
+    #   profiles: R dataframe with profile id and profile name.
+    query.uri <- paste('https://www.googleapis.com/analytics/v3/',
+                       'management/accounts/~all/webproperties/~all/',
+		       'profiles?access_token=',
+                       access_token,
+                       sep="", 
+		       collapse = ",")
+    if (!is.character(query.uri)) {
+      stop("the query.uri parameter must be a character string")
+    }
+	
+    # This api.reponse should be in json format
+    api.response.json <- GetAcctDataFeedJSON(query.uri)
+    profiles.param <- GetProfilesFromJSON(api.response.json)
+    return(profiles.param$profiles)
+  }
+  
+  ParseDataFeedJSON <- function(GA.Data) {
+    # This function will parse the json response and checks if the reponse 
+    # is contains an error, if found it will promt user with the related 
+    # error message.
+    # Args:
+    #   GA.Data: The json reponse returned by the Google analytics Data 
+    #            feed API. 
+    # Returns:
+    #    GA.list.param: GA.list.param list object obtained from this json 
+    #                   argument GA.Data.
+    GA.list.param <- ParseApiErrorMessage(GA.Data)
+    if (!is.null(GA.list.param$code)) {
+      stop(paste("code :",
+                 GA.list.param$code,
+                 "Reason :",
+	         GA.list.param$message))
+    }
+    return(GA.list.param)
   }
 
-  GetReportData <- function(query.builder,
+  GetDataFeed <- function(query.uri) {
+    # This will request with the prepared Query to the Google Analytics 
+    # Data feed API and returns the data in dataframe R object.
+    # Args: 
+    #   query.uri: The URI prepared by the QueryBuilder class.
+    # Returns:
+    #   GA.DF: The dataframe stored with the dimensions and metrics 
+    GA.Data <- getURL(paste(query.uri, sep = "", collapse = ","))	
+    GA.list <- ParseDataFeedJSON(GA.Data)
+    # For getting the total numbers of the data rows  
+    total.results <-  GA.list$totalResults 
+    if (is.null(GA.list$rows)) {
+      print("Your query matched 0 results")
+      break
+    }
+		
+    if (length(query$dimensions()) == 0) {
+      totalrows <- 1
+      dataframe.param <- GA.list$rows[[1]]
+      dim(dataframe.param) <- c(1, length(dataframe.param))
+    } else {
+      totalrows <- nrow(do.call(rbind, as.list(GA.list$rows)))
+      dataframe.param <- rbind(dataframe.param, 
+	                       do.call(rbind, as.list(GA.list$rows)))
+    }
+    GA.DF <- SetDataFrame(GA.list$columnHeaders, dataframe.param)
+    return(list(total.results = total.results, data = GA.DF))
+  }
+  
+  GetReportData <- function(query.builder, 
                             start.index = 1,
-                            max.rows = 1000) {
-    # Returns the data specified by the query, auto-paginating and combining
-    # rows if needed. This also validates the query to ensure the minimum
-    # required parameters are set.
-    #
-    # Args:
-    #   query.builder: An instance of the QueryBuilder() function.
-    #   start.index: The starting point for where GA retrieves data.
-    #   max.rows: The total number of results to return and join together in
-    #             the data. This is set to 10,000 at the start so the user can
-    #             see the total number, and then choose.  We have an upper
-    #             limit of 1,000,000 rows in place.
-    # Returns:
-    #   A R data.frame of all the rows of data available up to the first
-    #   1,000,000.
+                            max.rows = NULL) {
+    # This function will request with prepared query string to retrive the GA 
+    # data feed in data.frame format. If the max.result term in the query is 
+    # greater than 10000 then it will return the total available data from 
+    # that profile by pagination otherwise it will return the data rows as per 
+    # request either less than 10000 or less than 10000
+    # Args : 
+    #   query.uri: The data feed query string generated by the Query builder 
+    #              Class.
+    # Returns :
+    #     api.response: The respose is in the dataframe format as the output 
+    #                   data retruned from the Google Analytics Data feed API.
 
     query.builder$validate()
-
     # Ensure the starting index is set per the user request
     # We can only return 10,000 rows in a single query
-    max.default.rows.per.query <- 10000
-    query.builder$max.results(min(max.default.rows.per.query, max.rows))
-    query.uri <- query.builder$to.uri()
+    kMaxDefaultRows <- 10000
+    max.rows <- query.builder$max.results()
+    df <- GetDataFeed(query.builder$to.uri())
+    access_token <- ValidateToken(access_token)
 
-    ga.feed <- GetXMLDataFeed(query.uri)
-    df <- GetRDataFromXML(ga.feed)
-
-    # find the total calls needed, and max of 1,000,000 rows by forcing max
-    # pagination == 100
-    if(max.rows < max.default.rows.per.query + 1) {
-      return(df)
+    if (is.null(max.rows) || max.rows <= kMaxDefaultRows) {
+     # No extra pagination is needed.
+     print(paste("Your query matched",
+                  nrow(df$data),
+                 "results that are stored to dataframe ga.data"))
+     return(df$data)
     } else {
-      pagination <- min(100, ceiling(df$total.results /
-                                     max.default.rows.per.query))
-      # We have the first 10,000 rows we add the rest of the data.
-      for (i in seq_along(2:pagination)) {
-        start.index <- (i * max.default.rows.per.query) + 1
-        query.builder$start.index(start.index)
-        query.uri <- query.builder$to.uri()
-        ga.feed <- GetXMLDataFeed(query.uri)
-        ga.data <- GetRDataFromXML(ga.feed)
-        df$data <- rbind(df$data, ga.data$data)
-        rm(ga.data)
-      }
-      return(df)
+    # Handle pagination. First get the number of pages needed. Then
+    # update the start index for each page and request the data.
+    pagination <- min(kMaxPages,
+                      ceiling(df$total.results / kMaxDefaultRows))
+    for (i in seq_along(2:pagination)) {
+      start.index <- (i * kMaxDefaultRows) + 1
+      query.builder$start.index(start.index)
+      ga.data <- GetDataFeed(query.builder$to.uri())
+      df$data <- rbind(df$data, ga.data$data)
+      rm(ga.data)
     }
+    print(paste("Your query matched",
+	        nrow(df$data),
+                "results that are stored to dataframe ga.data"))
+    return(df$data)   
+    }
+  } 
+  
+  ParseApiErrorMessage <- function(api.response.json) {
+    # To check whether the returned JSON response is error or not. 
+    # If it is error then it will  
+    # Args :  
+    #   api.response.json: The json data as reposnse returned by the 
+    #   Google Data feed API or Google Management API
+    # Returns :
+    #   If there is error in JSON response then this function will return the 
+    #   related error code and message for that error.
+    api.response.list <- fromJSON(api.response.json, method = 'C')	
+    check.param <- regexpr("error", api.response.list)
+    if (check.param[1] != -1) {
+      return(list(code = api.response.list$error$code,
+		  message = api.response.list$error$message))
+    } else {
+    code <- NULL
+    return(api.response.list)
+    }		
   }
-
-
   ##############################################################################
-  return(list(GetXMLDataFeed  = GetXMLDataFeed,
-              GetRDataFromXML = GetRDataFromXML,
-              SetCredentials  = SetCredentials,
-              GetProfileXML   = GetProfileXML,
-              GetProfileData  = GetProfileData,
-              GetReportData   = GetReportData))
+
+  return(list(GetProfileData       = GetProfileData,
+              GetReportData        = GetReportData,
+              GetAcctDataFeedJSON  = GetAcctDataFeedJSON,
+              GetProfilesFromJSON  = GetProfilesFromJSON,
+	      ParseApiErrorMessage = ParseApiErrorMessage,
+	      ParseDataFeedJSON    = ParseDataFeedJSON,
+	      kMaxDefaultRows      = kMaxDefaultRows)) 
 }
