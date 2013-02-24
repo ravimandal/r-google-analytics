@@ -34,5 +34,6 @@ request.}
 Analytics data. If NULL is used, the segment parameter will be
 unset. If no parameter is specified, the current segment value
 is returned.}}
-\examples{gaid::10
-dynamic::ga:medium==referral}
+\examples{
+#gaid::10
+#dynamic::ga:medium==referral}

@@ -98,7 +98,7 @@ QueryBuilder <- function() {
   }
   
   EndDate <- function(end.date.param = NA) {
-   # Sets the end date.
+    # Sets the end date.
     # Optional.
     # All Analytics feed requests must specify a beginning and ending date
     # range. If you do not indicate start- and end-date values for the
