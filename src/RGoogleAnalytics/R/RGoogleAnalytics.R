@@ -14,7 +14,7 @@ RGoogleAnalytics <- function() {
   # Examples:
   # Step: 1. Authorize your account and paste the accesstoken 
   #    query <- QueryBuilder()
-  #    access_token <- query$authorize()    					 
+  #    access_token <- query$authorize()    						 
   # Step: 2. Create a new Google Analytics API object
   #	   ga <- RGoogleAnalytics()
   #    ga.profiles <- ga$GetProfileData(access_token)

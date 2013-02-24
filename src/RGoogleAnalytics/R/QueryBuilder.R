@@ -1,26 +1,3 @@
-# Copyright 2010 Google Inc. All Rights Reserved.
-# Author: Mike Pearmain.
-# Author: Nick Mihailovski.
-# Author: Nicolas Remy.
-# Contributor: Vignesh Prajapati.
-
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-# This is the QueryBuilder() function to be used with the RGoogleAnalytics()
-# functions in order to process a request from the GA API.
-# The RGoogleAnalytics() functions are not dependent on this, but we use
-# this as a helper for constructing the correct URI's to retrieve data.
-
 QueryBuilder <- function() {
   # The main builder class for constructing URI requests.
   # This function lists all the elements and parameters that make up a data
