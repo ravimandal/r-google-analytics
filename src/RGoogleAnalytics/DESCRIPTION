@@ -4,7 +4,7 @@ Title: R Handler for importing Google Analytics information from the
 Version: 1.2
 Date: 2013-01-01
 Author: Michael Pearmain, Nicolas Remy, Nick Mihailovski
-Maintainer: Michael Pearmain <mpearmain@google.com>
+Maintainer: Michael Pearmain <michael.pearmain@gmail.com>
 Description: Allows a user to use the Google Analytics (GA) API to read
     data directly from GA into R as a data.frame. As of now this script
     allows you to: Create a new export object. Authenticate with your
