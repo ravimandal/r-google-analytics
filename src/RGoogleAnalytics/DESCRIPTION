@@ -16,4 +16,4 @@ License: Apache License (==2.0)
 LazyLoad: yes
 Depends: RJSON, RCurl
 Collate: 'QueryBuilder.R' 'RGoogleAnalytics.R'
-Packaged: 2013-01-04 16:21:55 UTC; vignesh
+Packaged: 2013-02-24 10:21:55 UTC; Michael.Pearmain
