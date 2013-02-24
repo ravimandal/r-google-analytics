@@ -1,7 +1,8 @@
 \name{Init}
 \alias{Init}
 \title{A function setting initial values of a GA URI query.}
-\usage{Init(start.date, end.date, dimensions, metrics, segment, sort, filters, max.results, start.index, table.id)}
+\usage{Init(start.date, end.date, dimensions, metrics, segment, sort, filters,
+    max.results, start.index, table.id)}
 \description{A function setting initial values of a GA URI query.}
 \value{Sets the initial query parameters.}
 \arguments{\item{start.date}{See QueryBuilder()}

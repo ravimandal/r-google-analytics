@@ -15,15 +15,16 @@
 
 # Driver file for running RGoogleAnalytics unit tests.
 library(RUnit)
+rm(list=ls())
 
 r.google.analytics.test.suite <-
   defineTestSuite("RGoogleAnalytics Unit Testing",
-                  dir = "./",
+                  dirs="./",
                   testFileRegexp =
                   "[a-zA-Z0-9_]+_unittest\\.R$",
                   testFuncRegexp = "^Test+",
                   rngKind = "Marsaglia-Multicarry",
                   rngNormalKind = "Kinderman-Ramage")
-
+isValidTestSuite(r.google.analytics.test.suite)
 test.result <- runTestSuite(r.google.analytics.test.suite)
 printTextProtocol(test.result)

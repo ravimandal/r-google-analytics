@@ -16,7 +16,7 @@
 
 # Run unit tests in R, for QueryBuilder.R
 # The driver file to execute is ./Runit_driver.R
-source("../R/QueryBuilder.R")
+source("D:/TATVIC-ML/R-Google_analytics/RGoogleAnalytics_1.1/RGoogleAnalytics_updated/R/package/QueryBuilder.R")
 
 # Tests for QueryBuilder().
 TestQueryBuilder <- function() {
@@ -90,11 +90,12 @@ TestDimensions <- function() {
 
   # Test value is unset if input is NULL.
   query$dimensions(NULL)
-  checkEquals(NULL, query$dimensions())
+  
+  checkEquals(NULL, query$dimensions(),"Passed for dimension check", silent=TRUE)
 
   # Test vector format.
   dimensions.not.vector <- as.Date("1981-06-26", "%Y-%m-%d")
-  checkException(test.QueryBuilder$dimensions(dimensions.not.vector),
+  checkException(query$dimensions(dimensions.not.vector),
                  silent = TRUE)
 
   # Test that vector length cannot exceed 7 dimensions.
@@ -106,11 +107,13 @@ TestDimensions <- function() {
                        "ga:medium",
                        "ga:source",
                        "ga:medium")
-  checkException(test.QueryBuilder$dimensions(dimensions.high), silent = TRUE)
+					   
+  				   
+  checkException(query$dimensions(dimensions.high), silent = TRUE)
 
   # Test to check vector is character.
   dimensions.numeric <- c(1, 2, 3, 4, 5)
-  checkException(test.QueryBuilder$dimensions(dimensions.numeric),
+  checkException(query$dimensions(dimensions.numeric),
                  silent = TRUE)
 }
 
@@ -119,8 +122,8 @@ TestMetrics <- function() {
   query <- QueryBuilder()
 
   # Test a pass inputs, we are testing for an invisible NULL return.
-  #checkEquals(test.QueryBuilder$metrics(metrics.pass.string), NULL)
-  #checkEquals(test.QueryBuilder$metrics(metrics.pass.vector), NULL)
+  #checkEquals(query$metrics(metrics.pass.string), NULL)
+  #checkEquals(query$metrics(metrics.pass.vector), NULL)
 
   # Test passing a string as a parameter.
   query$metrics("ga:pageviews,ga:visits")
@@ -276,17 +279,17 @@ TestTableID <- function() {
 # Tests the ToUri() function within the QueryBuilder() class.
 # This assumes the parameters pass the parameter tests.
 TestToUri <- function() {
-  expected.uri <- paste("https://www.google.com/analytics/feeds/data",
-                        "?start-date=2010-05-01",
-                        "&end-date=2010-05-31",
-                        "&dimensions=ga:date",
-                        "&metrics=ga:visits",
-                        "&segment=dynamic::ga:medium==organic",
-                        "&sort=ga:date",
-                        "&filters=ga:source==google",
+  expected.uri <- paste("https://www.googleapis.com/analytics/v3/data/ga",
+                        "?start-date=2010%2D05%2D01",
+                        "&end-date=2010%2D05%2D31",
+                        "&dimensions=ga%3Adate",
+                        "&metrics=ga%3Avisits",
+                        "&segment=dynamic%3A%3Aga%3Amedium%3D%3Dorganic",
+                        "&sort=ga%3Adate",
+                        "&filters=ga%3Asource%3D%3Dgoogle",
                         "&max-results=10000",
                         "&start-index=25",
-                        "&ids=ga:30661272",
+                        "&ids=ga%3A30661272",
                         sep = "")
 
   # Build the query.
@@ -317,7 +320,7 @@ TestToUri <- function() {
   query$start.index(NULL)
   query$table.id(NULL)
 
-  checkEquals("https://www.google.com/analytics/feeds/data?", query$to.uri())
+  checkEquals("https://www.googleapis.com/analytics/v3/data/ga?", query$to.uri())
 }
 
 # Tests for the Validate() function within the QueryBuilder() class.

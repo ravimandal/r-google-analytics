@@ -16,186 +16,116 @@
 # Run unit tests in R, for RGoogleAnalytics.R
 # The driver file to execute is ./Runit_driver.R
 
-source("../R/RGoogleAnalytics.R")
 
 # Unit tests for the RGoogleAnalytics() class.
 # The SetCredentials() function is trivial and only returns an Auth.Token as a
 # string.  This is non-trivial to mock so no unit test is applied.
 
+source("D:/Office/vignesh/RGoogleAnalytics/R/RGoogleAnalytics.r")
+
 # Test the parsing of XML feed after it has been returned for profile
 # information.
-TestGetProfileDataXML <- function() {
-  # We create mock data of the XML feed that would be returned from the
-  # GetProfileXML() function.
+
+  # To check the profile data returned as JSON response. 
+TestParseAccountFeedJSON <- function() {
+    
   ga <- RGoogleAnalytics()
-  # Create a data.frame with the same properties as the mock XML.
-  AccountName <- c("白雪公主")
-  ProfileName <- c("www.googlestore.com ")
-  TableId <- c("ga:30661272")
-  test.profile <- data.frame(AccountName, ProfileName, TableId)
+  # Create a data.frame with the same properties as the mock JSON.
+  
+ 
+  ProfileName <- c("tatvic.com")
+  TableId <- c("10696290")
+  test.profile <- data.frame(ProfileName=ProfileName,TableId=TableId)
+   
 
-  data <- ga$GetProfileData(profile = SampleProfileXMLString())
+  data <- ga$GetProfilesFromJSON(AccountFeedJSONString())
+  
+  profile.data <- data.frame(ProfileName=data$profiles$name,TableId=data$profiles$id)
+  
+  checkEquals(test.profile,profile.data)
 
-  checkEquals(test.profile, data$profile)
-
-  # Check the "totalResults" matched to 1, as in the XML.
-  checkEqualsNumeric(1, as.numeric(data$total.results))
+  
+  checkEqualsNumeric(1, as.numeric(data$totalResults))
+  
 }
 
-# Test the parsing of XML data feed after it has been returned for a uri
-# containing the data.
-TestGetRDataFromXML <- function() {
-  # We create mock data of the XML feed that would be returned from the
-  # GetDataFeedXML() function.
+
+AccountFeedJSONString <- function() {
+  return('{\"kind\":\"analytics#profiles\",\"username\":\"vignesh@tatvic.com\",\"totalResults\":1,\"startIndex\":1,\"itemsPerPage\":1000,\"items\":[{\"id\":\"10696290\",\"kind\":\"analytics#profile\",\"selfLink\":\"https://www.googleapis.com/analytics/v3/management/accounts/5306665/webproperties/UA-5306665-1/profiles/10696290\",\"accountId\":\"5306665\",\"webPropertyId\":\"UA-5306665-1\",\"internalWebPropertyId\":\"10240597\",\"name\":\"tatvic.com\",\"currency\":\"USD\",\"timezone\":\"Asia/Calcutta\",\"websiteUrl\":\"http://www.tatvic.com/\",\"excludeQueryParameters\":\"fb_xd_fragment,tim,m,token,n\",\"siteSearchQueryParameters\":\"s\",\"type\":\"WEB\",\"created\":\"2008-08-15T14:45:21.000Z\",\"updated\":\"2012-12-10T13:47:52.046Z\",\"eCommerceTracking\":false,\"parentLink\":{\"type\":\"analytics#webproperty\",\"href\":\"https://www.googleapis.com/analytics/v3/management/accounts/5306665/webproperties/UA-5306665-1\"},\"childLink\":{\"type\":\"analytics#goals\",\"href\":\"https://www.googleapis.com/analytics/v3/management/accounts/5306665/webproperties/UA-5306665-1/profiles/10696290/goals\"}}]}')
+}
+
+# To test the error message existense in JSON response.
+TestParseApiErrorMessage <- function() {
   ga <- RGoogleAnalytics()
+  error.message <- ga$ParseApiErrorMessage(SampleErrorJSONString())
+ 
+  checkEquals(400, error.message$code)
+  checkEquals('Sort key ga:foo is not a dimension or metric in this query.',
+              error.message$message)
+}
 
-  # Testing the $data structure is the same.
-  ga.source  <- c("blogger.com",
-                  "google.com",
-                  "stumbleupon.com",
-                  "google.co.uk",
-                  "google.co.in")
-  ga.medium  <- rep("referral", 5)
-  ga.visits  <- as.factor(c("68140", "29666", "4012", "2968", "2793"))
-  ga.bounces <- as.factor(c("61095", "14979", "848", "2084", "1891"))
-  test.data  <- data.frame(ga.source, ga.medium, ga.visits, ga.bounces)
-  xml.data   <- ga$GetRDataFromXML(SampleDataXMLString())
-  checkEquals(test.data, xml.data$data)
+SampleErrorJSONString <- function() {
+return('{\"error\":{\"errors\":[{\"domain\":\"global\",\"reason\":\"badRequest\",\"message\":\"Sort key ga:foo is not a dimension or metric in this query.\"}],\"code\":400,\"message\":\"Sort key ga:foo is not a dimension or metric in this query.\"}}')
+}
 
-  # Testing the $total.results is as expected.
-  test.total.results <- 6451
-  checkEquals(test.total.results, xml.data$total.results)
+# To test the GA data feed returned as JSON response.
 
-  # Testing aggr.totals match
-  ga.visits <- 136540
-  ga.bounces <- 101535
+TestParseDataFeedJSON <- function(){
+ga <- RGoogleAnalytics()
+
+# Testing the $data structure is the same.
+DataFeed.json <- ga$ParseDataFeedJSON(DataFeedJSONString())
+DataFeed.json.totalResults <- DataFeed.json$totalResults
+DataFeed.json.totalsForAllResults.visits <- DataFeed.json$totalsForAllResults$`ga:visits`
+DataFeed.json.totalsForAllResults.bounces <- DataFeed.json$totalsForAllResults$`ga:bounces`
+
+
+ga.source  <- c("(direct)",
+                "Tatvic Newsletter",
+                "analytics.blogspot.com",
+                "analytics.blogspot.in")
+				  
+ga.medium  <- c("(none)","email","referral","referral")
+
+ga.visits  <- c(27,1,2,1)
+
+ga.bounces <- c(17,1,0,0)
+test.data  <- data.frame(ga.source, ga.medium, ga.visits, ga.bounces,
+                           stringsAsFactors = FALSE)
+						   
+names(test.data) <- c("source", "medium", "visits", "bounces")
+
+
+
+
+# Testing the $total.results is as expected.
+  
+  test.total.results <- 28
+  checkEquals(test.total.results, as.numeric(DataFeed.json.totalResults))
+
+# Testing aggr.totals match
+  
+  ga.visits <- 148
+  ga.bounces <- 94
+  
   test.aggr.totals <- as.data.frame(rbind(ga.visits, ga.bounces))
   names(test.aggr.totals) <- "aggregate.totals"
   rownames(test.aggr.totals) <- c("ga:visits", "ga:bounces")
-  checkEquals(test.aggr.totals, xml.data$aggr.totals)
+
+  
+ 
+  
+  json.aggr.totals <- as.data.frame(rbind(as.numeric(DataFeed.json.totalsForAllResults.visits), as.numeric(DataFeed.json.totalsForAllResults.bounces)))
+  names(json.aggr.totals) <- "aggregate.totals"
+  rownames(json.aggr.totals) <- c("ga:visits", "ga:bounces")
+
+  
+  
+  checkEquals(test.aggr.totals, json.aggr.totals)
+
 }
 
-# Sample XML structures.
 
-SampleProfileXMLString <- function() {
-  return('<?xml version="1.0" encoding="UTF-8"?>
-     <feed xmlns="http://www.w3.org/2005/Atom"
-           xmlns:dxp="http://schemas.google.com/analytics/2009"
-           xmlns:ga="http://schemas.google.com/ga/2009"
-           xmlns:openSearch="http://a9.com/-/spec/opensearch/1.1/"
-           xmlns:gd="http://schemas.google.com/g/2005"
-  gd:etag="W/&quot;CEINQ344fSp7I2A9Wx5QF0s.&quot;" gd:kind="analytics#accounts">
-  <id>
-    http://www.google.com/analytics/feeds/accounts/analytics-support@google.com
-  </id>
-  <updated>2010-09-06T01:43:12.035-07:00</updated>
-  <title>Profile list for analytics-support@google.com</title>
-  <link rel="self" type="application/atom+xml"
-        href="https://www.google.com/analytics/feeds/accounts/default"/>
-  <author>
-    <name>Google Analytics</name>
-  </author>
-  <generator version="1.0">Google Analytics</generator>
-  <openSearch:totalResults>1</openSearch:totalResults>
-  <openSearch:startIndex>1</openSearch:startIndex>
-  <openSearch:itemsPerPage>47</openSearch:itemsPerPage>
-  <entry gd:etag="W/&quot;CEINQ344fSp7I2A9Wx5QF0s.&quot;"
-         gd:kind="analytics#account">
-    <id>http://www.google.com/analytics/feeds/accounts/ga:30661272</id>
-    <updated>2010-09-06T01:43:12.035-07:00</updated>
-    <title>www.googlestore.com </title>
-    <link rel="alternate" type="text/html"
-          href="http://www.google.com/analytics"/>
-    <dxp:property name="ga:accountId" value="30481"/>
-    <dxp:property name="ga:accountName" value="白雪公主"/>
-    <dxp:property name="ga:profileId" value="30661272"/>
-    <dxp:property name="ga:webPropertyId" value="UA-30481-1"/>
-    <dxp:property name="ga:currency" value="USD"/>
-    <dxp:property name="ga:timezone" value="America/Los_Angeles"/>
-    <dxp:tableId>ga:30661272</dxp:tableId>
-  </entry>
-  </feed>')
+DataFeedJSONString <- function(){
+return('{\"kind\":\"analytics#gaData\",\"id\":\"https://www.googleapis.com/analytics/v3/data/ga?ids=ga:10696290&dimensions=ga:source,ga:medium&metrics=ga:visits,ga:bounces&start-date=2013-01-03&end-date=2013-01-03&start-index=1&max-results=4\",\"query\":{\"start-date\":\"2013-01-03\",\"end-date\":\"2013-01-03\",\"ids\":\"ga:10696290\",\"dimensions\":\"ga:source,ga:medium\",\"metrics\":[\"ga:visits\",\"ga:bounces\"],\"start-index\":1,\"max-results\":4},\"itemsPerPage\":4,\"totalResults\":28,\"selfLink\":\"https://www.googleapis.com/analytics/v3/data/ga?ids=ga:10696290&dimensions=ga:source,ga:medium&metrics=ga:visits,ga:bounces&start-date=2013-01-03&end-date=2013-01-03&start-index=1&max-results=4\",\"nextLink\":\"https://www.googleapis.com/analytics/v3/data/ga?ids=ga:10696290&dimensions=ga:source,ga:medium&metrics=ga:visits,ga:bounces&start-date=2013-01-03&end-date=2013-01-03&start-index=5&max-results=4\",\"profileInfo\":{\"profileId\":\"10696290\",\"accountId\":\"5306665\",\"webPropertyId\":\"UA-5306665-1\",\"internalWebPropertyId\":\"10240597\",\"profileName\":\"tatvic.com\",\"tableId\":\"ga:10696290\"},\"containsSampledData\":false,\"columnHeaders\":[{\"name\":\"ga:source\",\"columnType\":\"DIMENSION\",\"dataType\":\"STRING\"},{\"name\":\"ga:medium\",\"columnType\":\"DIMENSION\",\"dataType\":\"STRING\"},{\"name\":\"ga:visits\",\"columnType\":\"METRIC\",\"dataType\":\"INTEGER\"},{\"name\":\"ga:bounces\",\"columnType\":\"METRIC\",\"dataType\":\"INTEGER\"}],\"totalsForAllResults\":{\"ga:visits\":\"148\",\"ga:bounces\":\"94\"},\"rows\":[[\"(direct)\",\"(none)\",\"27\",\"17\"],[\"Tatvic Newsletter\",\"email\",\"1\",\"1\"],[\"analytics.blogspot.com\",\"referral\",\"2\",\"0\"],[\"analytics.blogspot.in\",\"referral\",\"1\",\"0\"]]}')
 }
-# test xml code from
-# http://ga-api-http-samples.googlecode.com/svn/trunk/src/v2/dataFeedResponse.xml
-SampleDataXMLString <- function() {
-  return("<?xml version='1.0' encoding='UTF-8'?>
-<feed xmlns='http://www.w3.org/2005/Atom' xmlns:dxp='http://schemas.google.com/analytics/2009' xmlns:openSearch='http://a9.com/-/spec/opensearch/1.1/' xmlns:gd='http://schemas.google.com/g/2005' gd:etag='W/&quot;DUINSHcycSp7I2A9WxRWFEQ.&quot;' gd:kind='analytics#data'>
-  <id>http://www.google.com/analytics/feeds/data?ids=ga:1174&amp;dimensions=ga:medium,ga:source&amp;metrics=ga:bounces,ga:visits&amp;filters=ga:medium%3D%3Dreferral&amp;start-date=2008-10-01&amp;end-date=2008-10-31</id>
-  <updated>2008-10-31T16:59:59.999-07:00</updated>
-  <title>Google Analytics Data for Profile 1174</title>
-  <link rel='self' type='application/atom+xml' href='http://www.google.com/analytics/feeds/data?max-results=5&amp;sort=-ga%3Avisits&amp;end-date=2008-10-31&amp;start-date=2008-10-01&amp;metrics=ga%3Avisits%2Cga%3Abounces&amp;ids=ga%3A1174&amp;dimensions=ga%3Asource%2Cga%3Amedium&amp;filters=ga%3Amedium%3D%3Dreferral'/>
-  <link rel='next' type='application/atom+xml' href='http://www.google.com/analytics/feeds/data?start-index=6&amp;max-results=5&amp;sort=-ga%3Avisits&amp;end-date=2008-10-31&amp;start-date=2008-10-01&amp;metrics=ga%3Avisits%2Cga%3Abounces&amp;ids=ga%3A1174&amp;dimensions=ga%3Asource%2Cga%3Amedium&amp;filters=ga%3Amedium%3D%3Dreferral'/>
-  <author>
-    <name>Google Analytics</name>
-  </author>
-  <generator version='1.0'>Google Analytics</generator>
-  <openSearch:totalResults>6451</openSearch:totalResults>
-  <openSearch:startIndex>1</openSearch:startIndex>
-  <openSearch:itemsPerPage>5</openSearch:itemsPerPage>
-  <dxp:aggregates>
-    <dxp:metric confidenceInterval='0.0' name='ga:visits' type='integer' value='136540'/>
-    <dxp:metric confidenceInterval='0.0' name='ga:bounces' type='integer' value='101535'/>
-  </dxp:aggregates>
-  <dxp:dataSource>
-    <dxp:property name='ga:profileId' value='1174'/>
-    <dxp:property name='ga:webPropertyId' value='UA-30481-1'/>
-    <dxp:property name='ga:accountName' value='Google Store'/>
-    <dxp:tableId>ga:1174</dxp:tableId>
-    <dxp:tableName>www.googlestore.com</dxp:tableName>
-  </dxp:dataSource>
-  <dxp:endDate>2008-10-31</dxp:endDate>
-  <dxp:startDate>2008-10-01</dxp:startDate>
-  <entry gd:etag='W/&quot;C0UEQX47eSp7I2A9WxRWFEw.&quot;' gd:kind='analytics#datarow'>
-    <id>http://www.google.com/analytics/feeds/data?ids=ga:1174&amp;ga:medium=referral&amp;ga:source=blogger.com&amp;filters=ga:medium%3D%3Dreferral&amp;start-date=2008-10-01&amp;end-date=2008-10-31</id>
-    <updated>2008-10-30T17:00:00.001-07:00</updated>
-    <title>ga:source=blogger.com | ga:medium=referral</title>
-    <link rel='alternate' type='text/html' href='http://www.google.com/analytics'/>
-    <dxp:dimension name='ga:source' value='blogger.com'/>
-    <dxp:dimension name='ga:medium' value='referral'/>
-    <dxp:metric confidenceInterval='0.0' name='ga:visits' type='integer' value='68140'/>
-    <dxp:metric confidenceInterval='0.0' name='ga:bounces' type='integer' value='61095'/>
-  </entry>
-  <entry gd:etag='W/&quot;C0UEQX47eSp7I2A9WxRWFEw.&quot;' gd:kind='analytics#datarow'>
-    <id>http://www.google.com/analytics/feeds/data?ids=ga:1174&amp;ga:medium=referral&amp;ga:source=google.com&amp;filters=ga:medium%3D%3Dreferral&amp;start-date=2008-10-01&amp;end-date=2008-10-31</id>
-    <updated>2008-10-30T17:00:00.001-07:00</updated>
-    <title>ga:source=google.com | ga:medium=referral</title>
-    <link rel='alternate' type='text/html' href='http://www.google.com/analytics'/>
-    <dxp:dimension name='ga:source' value='google.com'/>
-    <dxp:dimension name='ga:medium' value='referral'/>
-    <dxp:metric confidenceInterval='0.0' name='ga:visits' type='integer' value='29666'/>
-    <dxp:metric confidenceInterval='0.0' name='ga:bounces' type='integer' value='14979'/>
-  </entry>
-  <entry gd:etag='W/&quot;C0UEQX47eSp7I2A9WxRWFEw.&quot;' gd:kind='analytics#datarow'>
-    <id>http://www.google.com/analytics/feeds/data?ids=ga:1174&amp;ga:medium=referral&amp;ga:source=stumbleupon.com&amp;filters=ga:medium%3D%3Dreferral&amp;start-date=2008-10-01&amp;end-date=2008-10-31</id>
-    <updated>2008-10-30T17:00:00.001-07:00</updated>
-    <title>ga:source=stumbleupon.com | ga:medium=referral</title>
-    <link rel='alternate' type='text/html' href='http://www.google.com/analytics'/>
-    <dxp:dimension name='ga:source' value='stumbleupon.com'/>
-    <dxp:dimension name='ga:medium' value='referral'/>
-    <dxp:metric confidenceInterval='0.0' name='ga:visits' type='integer' value='4012'/>
-    <dxp:metric confidenceInterval='0.0' name='ga:bounces' type='integer' value='848'/>
-  </entry>
-  <entry gd:etag='W/&quot;C0UEQX47eSp7I2A9WxRWFEw.&quot;' gd:kind='analytics#datarow'>
-    <id>http://www.google.com/analytics/feeds/data?ids=ga:1174&amp;ga:medium=referral&amp;ga:source=google.co.uk&amp;filters=ga:medium%3D%3Dreferral&amp;start-date=2008-10-01&amp;end-date=2008-10-31</id>
-    <updated>2008-10-30T17:00:00.001-07:00</updated>
-    <title>ga:source=google.co.uk | ga:medium=referral</title>
-    <link rel='alternate' type='text/html' href='http://www.google.com/analytics'/>
-    <dxp:dimension name='ga:source' value='google.co.uk'/>
-    <dxp:dimension name='ga:medium' value='referral'/>
-    <dxp:metric confidenceInterval='0.0' name='ga:visits' type='integer' value='2968'/>
-    <dxp:metric confidenceInterval='0.0' name='ga:bounces' type='integer' value='2084'/>
-  </entry>
-  <entry gd:etag='W/&quot;C0UEQX47eSp7I2A9WxRWFEw.&quot;' gd:kind='analytics#datarow'>
-    <id>http://www.google.com/analytics/feeds/data?ids=ga:1174&amp;ga:medium=referral&amp;ga:source=google.co.in&amp;filters=ga:medium%3D%3Dreferral&amp;start-date=2008-10-01&amp;end-date=2008-10-31</id>
-    <updated>2008-10-30T17:00:00.001-07:00</updated>
-    <title>ga:source=google.co.in | ga:medium=referral</title>
-    <link rel='alternate' type='text/html' href='http://www.google.com/analytics'/>
-    <dxp:dimension name='ga:source' value='google.co.in'/>
-    <dxp:dimension name='ga:medium' value='referral'/>
-    <dxp:metric confidenceInterval='0.0' name='ga:visits' type='integer' value='2793'/>
-    <dxp:metric confidenceInterval='0.0' name='ga:bounces' type='integer' value='1891'/>
-  </entry>
-</feed>")
-}
-
