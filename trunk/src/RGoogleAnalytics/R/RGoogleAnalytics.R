@@ -6,10 +6,10 @@ RGoogleAnalytics <- function() {
   #           GetProfileData()       
   #           GetReportData()      
   #           GetAcctDataFeedJSON() 
-  #			  GetProfilesFromJSON()  
-  #	          ParseApiErrorMessage() 
-  #	 		  ParseDataFeedJSON()    
-  #			  kMaxDefaultRows()      
+  #	      GetProfilesFromJSON()  
+  #	      ParseApiErrorMessage() 
+  #	      ParseDataFeedJSON()    
+  #	      kMaxDefaultRows()      
   # For more information please look at the help pages for each function.
   # Examples:
   # Step: 1. Authorize your account and paste the accesstoken 
