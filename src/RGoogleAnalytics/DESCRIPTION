@@ -14,6 +14,6 @@ Description: Allows a user to use the Google Analytics (GA) API to read
 	RCurl and rjson packages. 
 License: Apache License (==2.0)
 LazyLoad: yes
-Depends: rjson, RCurl
+Depends: RJSON, RCurl
 Collate: 'QueryBuilder.R' 'RGoogleAnalytics.R'
 Packaged: 2013-01-04 16:21:55 UTC; vignesh
