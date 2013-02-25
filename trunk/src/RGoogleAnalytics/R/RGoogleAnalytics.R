@@ -275,7 +275,10 @@ RGoogleAnalytics <- function() {
     kMaxDefaultRows <- 10000
     max.rows <- query.builder$max.results()
     df <- GetDataFeed(query.builder$to.uri())
-    access_token <- ValidateToken(access_token)
+
+    if (df$total.results < kMaxDefaultRows) {
+      max.rows <- kMaxDefaultRows
+    }
 
     if (is.null(max.rows) || max.rows <= kMaxDefaultRows) {
      # No extra pagination is needed.
@@ -284,23 +287,24 @@ RGoogleAnalytics <- function() {
                  "results that are stored to dataframe ga.data"))
      return(df$data)
     } else {
+      access_token <- ValidateToken(access_token)
     # Handle pagination. First get the number of pages needed. Then
     # update the start index for each page and request the data.
-    pagination <- min(kMaxPages,
-                      ceiling(df$total.results / kMaxDefaultRows))
-    for (i in seq_along(2:pagination)) {
-      start.index <- (i * kMaxDefaultRows) + 1
-      query.builder$start.index(start.index)
-      ga.data <- GetDataFeed(query.builder$to.uri())
-      df$data <- rbind(df$data, ga.data$data)
-      rm(ga.data)
-    }
+      pagination <- min(kMaxPages,
+                        ceiling(df$total.results / kMaxDefaultRows))
+      for (i in seq_along(2:pagination)) {
+        start.index <- (i * kMaxDefaultRows) + 1
+        query.builder$start.index(start.index)
+        ga.data <- GetDataFeed(query.builder$to.uri())
+        df$data <- rbind(df$data, ga.data$data)
+        rm(ga.data)
+      }
     print(paste("Your query matched",
-	        nrow(df$data),
+	              nrow(df$data),
                 "results that are stored to dataframe ga.data"))
-    return(df$data)   
+    return(df$data)
     }
-  } 
+  }
   
   ParseApiErrorMessage <- function(api.response.json) {
     # To check whether the returned JSON response is error or not. 
