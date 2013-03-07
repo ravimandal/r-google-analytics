@@ -1,5 +1,5 @@
 # For attaching GaOAuth2.R to use its functions.
-source("D:/Office/vignesh/Projects/RGA/New_auth_script/GaOAuth2_.R")
+source("GaOAuth2.R")
 
 # To Generate the accesstoken based on user's application credentials.
 access_token <- GenerateAccessToken()
