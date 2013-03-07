@@ -4,7 +4,6 @@ source("GaOAuth2.R")
 # To Generate the accesstoken based on user's application credentials.
 access_token <- GenerateAccessToken()
 
-
 ############ Code to extract the GA data will be placed here ##################
 
 # To Remove the stored access token OR need to access the GA data of 
