@@ -31,8 +31,6 @@ ParseDataFeedJSON() - This function will parse the data feed json response and c
 
 }
 \examples{
-# Create a new Google Analytics API object
-# ga <- RGoogleAnalytics()
 
 # Authorize your account and paste the accesstoken 
 # query <- QueryBuilder()
