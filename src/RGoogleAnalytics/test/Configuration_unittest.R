@@ -19,7 +19,7 @@
 # The driver file to execute is ./Runit_driver.R
 
 source("./R/Configuration.R")
-load("./R/ga.account.Rda")
+load("./man/ga.account.Rda")
 conf <- Configuration()
  
 TestParameterSelector <- function(){
