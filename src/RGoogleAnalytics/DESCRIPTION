@@ -1,9 +1,9 @@
 Package: RGoogleAnalytics
 Title: R Handler for importing Google Analytics information from the
         Google Analytics API
-Version: 1.2
-Date: 2013-01-01
-Author: Michael Pearmain, Nicolas Remy, Nick Mihailovski
+Version: 1.4
+Date: 2013-09-29
+Author: Michael Pearmain, Nicolas Remy, Nick Mihailovski, Vignesh Prajapati
 Maintainer: Michael Pearmain <michael.pearmain@gmail.com>
 Description: Allows a user to use the Google Analytics (GA) API to read
     data directly from GA into R as a data.frame. As of now this script
@@ -15,5 +15,5 @@ Description: Allows a user to use the Google Analytics (GA) API to read
 License: Apache License (==2.0)
 LazyLoad: yes
 Depends: rjson, RCurl
-Collate: 'QueryBuilder.R' 'RGoogleAnalytics.R'
+Collate: 'QueryBuilder.R' 'RGoogleAnalytics.R' 'Configuration.R'
 Packaged: 2013-02-24 10:21:55 UTC; Michael.Pearmain
