@@ -33,29 +33,29 @@ ParseDataFeedJSON() - This function will parse the data feed json response and c
 \examples{
 
 # Authorize your account and paste the accesstoken 
-# query <- QueryBuilder()
-# access_token <- query$authorize()
+ query <- QueryBuilder()
+ access_token <- query$authorize()
 
 # Create a new Google Analytics API object
-# ga <- RGoogleAnalytics()
-# ga.profiles <- ga$GetProfileData(access_token)
+ ga <- RGoogleAnalytics()
+ ga.profiles <- ga$GetProfileData(access_token)
 
 # List the GA profiles 
-# ga.profiles
+ ga.profiles
 
 # Build the query string 
-# query$Init(start.date = "2012-06-18",
-#           end.date = "2012-12-18",
-#           dimensions = "ga:date,ga:pagePath",
-#           metrics = "ga:visits,ga:pageviews,ga:timeOnPage",
-#           sort = "ga:visits",
-#           max.results = 99,
-#           table.id = paste("ga:",ga.profiles$id[1],sep="",collapse=","),
-#           access_token=access_token)
+ query$Init(start.date = "2012-06-18",
+           end.date = "2012-12-18",
+           dimensions = "ga:date,ga:pagePath",
+           metrics = "ga:visits,ga:pageviews,ga:timeOnPage",
+           sort = "ga:visits",
+           max.results = 99,
+           table.id = paste("ga:",ga.profiles$id[1],sep="",collapse=","),
+           access_token=access_token)
 
 # Make a request to get the data from the API
-# ga.data <- ga$GetReportData(query)
+ ga.data <- ga$GetReportData(query)
 
 # Look at the returned data
-# head(ga.data)
+ head(ga.data)
 }
