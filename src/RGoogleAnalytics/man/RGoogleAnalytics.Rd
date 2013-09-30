@@ -31,7 +31,7 @@ ParseDataFeedJSON() - This function will parse the data feed json response and c
 
 }
 \examples{
-
+\dontrun{
 # Authorize your account and paste the accesstoken 
  query <- QueryBuilder()
  access_token <- query$authorize()
@@ -58,4 +58,5 @@ ParseDataFeedJSON() - This function will parse the data feed json response and c
 
 # Look at the returned data
  head(ga.data)
+}
 }

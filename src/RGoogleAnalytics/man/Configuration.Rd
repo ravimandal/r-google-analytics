@@ -1,13 +1,8 @@
 \name{Configuration}
-
 \alias{Configuration}
-
-
 \title{ For retrieving the Configuration data.}
-
 \description{This class includes several methods for retrieving various configuration elements like Accouts,
  WebProperty, WebProfiles, Goals, Customsource and Segments. }
-
 \value{
 GetAccounts() - To retrieve all Google Analytics accounts to which the user has access.
 
@@ -28,9 +23,8 @@ For more information visit,
 2. \link{https://developers.google.com/analytics/devguides/config/mgmt/v3/#concepts}
 }
 
-
 \examples{
-
+\dontrun{
 ## Examples on How to use Configuration 
 
 # Creating the object of this Configuration class
@@ -67,5 +61,5 @@ ga.customeDataSource <- conf$GetCustomSource(ga.account$id[3],ga.webProperty$id[
 
 ## For retrieving the Google Analytics segments
 ga.segments <- conf$GetSegments()
-
+}
 }
