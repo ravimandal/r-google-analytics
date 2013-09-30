@@ -15,9 +15,7 @@
 # limitations under the License.
 
 # Run unit tests in R, for QueryBuilder.R
-# The driver file to execute is ./Runit_driver.R
-source("D:/TATVIC-ML/R-Google_analytics/RGoogleAnalytics_1.1/RGoogleAnalytics_updated/R/package/QueryBuilder.R")
-
+# The driver file to execute is ../R//Runit_driver.R
 # Tests for QueryBuilder().
 TestQueryBuilder <- function() {
   test.list <- list(start.date  = function(start.date = NULL){},
@@ -39,18 +37,18 @@ TestQueryBuilder <- function() {
 # Tests for the StartDate() function within the QueryBuilder() class.
 TestStartDate <- function() {
   query <- QueryBuilder()
-
+  
   # Test setting the start.date.
   query$start.date("2005-11-01")
   checkEquals("2005-11-01", query$start.date())
-
+  
   # Test setting to NULL unsets the parameter.
   query$start.date(NULL)
   checkEquals(NULL, query$start.date())
-
+  
   # Test to check that a date is the correct type.
   checkException(query$start.date(19810626), silent = TRUE)
-
+  
   # Test to check that a date must be in the YYYY-MM-DD format.
   checkException(query$start.date("June 26th 1981"), silent = TRUE)
 }
@@ -58,18 +56,18 @@ TestStartDate <- function() {
 # Tests for the EndDate() function within the QueryBuilder() class.
 TestEndDate <- function() {
   query <- QueryBuilder()
-
+  
   # Test setting the end.date.
   query$end.date("2010-09-12")
   checkEquals("2010-09-12", query$end.date())
-
+  
   # Test setting to NULL unsets the parameter.
   query$end.date(NULL)
   checkEquals(NULL, query$end.date())
-
+  
   # Test to check that a date is the correct type.
   checkException(query$end.date(19810626), silent = TRUE)
-
+  
   # Test to check that a date must be in the YYYY-MM-DD format.
   checkException(query$end.date("June 26th 1981"), silent = TRUE)
 }
@@ -78,26 +76,26 @@ TestEndDate <- function() {
 # Dimensions is an optional parameter.
 TestDimensions <- function() {
   query <- QueryBuilder()
-
+  
   # Test passing a string as a parameter.
   query$dimensions("ga:source,ga:medium")
   checkEquals("ga:source,ga:medium", query$dimensions())
-
-
+  
+  
   # Test passing a vector as a parameter.
   query$dimensions(c("ga:date", "ga:landingPagePath"))
   checkEquals("ga:date,ga:landingPagePath", query$dimensions())
-
+  
   # Test value is unset if input is NULL.
   query$dimensions(NULL)
   
   checkEquals(NULL, query$dimensions(),"Passed for dimension check", silent=TRUE)
-
+  
   # Test vector format.
   dimensions.not.vector <- as.Date("1981-06-26", "%Y-%m-%d")
   checkException(query$dimensions(dimensions.not.vector),
                  silent = TRUE)
-
+  
   # Test that vector length cannot exceed 7 dimensions.
   dimensions.high <- c("ga:source",
                        "ga:medium",
@@ -107,10 +105,9 @@ TestDimensions <- function() {
                        "ga:medium",
                        "ga:source",
                        "ga:medium")
-					   
-  				   
+  
   checkException(query$dimensions(dimensions.high), silent = TRUE)
-
+  
   # Test to check vector is character.
   dimensions.numeric <- c(1, 2, 3, 4, 5)
   checkException(query$dimensions(dimensions.numeric),
@@ -120,27 +117,27 @@ TestDimensions <- function() {
 # Tests for the metrics() function within the QueryBuilder() class.
 TestMetrics <- function() {
   query <- QueryBuilder()
-
+  
   # Test a pass inputs, we are testing for an invisible NULL return.
   #checkEquals(query$metrics(metrics.pass.string), NULL)
   #checkEquals(query$metrics(metrics.pass.vector), NULL)
-
+  
   # Test passing a string as a parameter.
   query$metrics("ga:pageviews,ga:visits")
   checkEquals("ga:pageviews,ga:visits", query$metrics())
-
+  
   # Test passing a vector as a parameter.
   query$metrics(c("ga:timeOnSite", "ga:transactions"))
   checkEquals("ga:timeOnSite,ga:transactions", query$metrics())
-
+  
   # Test value is unset if input is NULL.
   query$metrics(NULL)
   checkEquals(NULL, query$metrics())
-
+  
   # Test vector format.
   metrics.not.vector <- as.Date("1981-06-26", "%Y-%m-%d")
   checkException(query$metrics(metrics.not.vector), silent = TRUE)
-
+  
   # Test that vector length cannot exceed 10 metrics.
   metrics.high <- c("ga:pageviews", "ga:visits",
                     "ga:pageviews", "ga:visits",
@@ -149,7 +146,7 @@ TestMetrics <- function() {
                     "ga:pageviews", "ga:visits",
                     "ga:pageviews")
   checkException(query$metrics(metrics.high), silent = TRUE)
-
+  
   # Test to check vector is character.
   metrics.numeric <- c(1, 2, 3, 4, 5)
   checkException(query$metrics(metrics.numeric), silent = TRUE)
@@ -160,11 +157,11 @@ TestMetrics <- function() {
 TestSegment <- function() {
   query <- QueryBuilder()
   segment.param <- "dynamic::ga:medium==referral"
-
+  
   # Test passing a string as a parameter.
   query$segment(segment.param)
   checkEquals(segment.param, query$segment())
-
+  
   # Test value is unset if input is NULL.
   query$segment(NULL)
   checkEquals(NULL, query$segment())
@@ -174,24 +171,23 @@ TestSegment <- function() {
 # Sort() is an optional parameter.
 TestSort <- function() {
   query <- QueryBuilder()
-
+  
   # Test passing a string as a parameter.
   query$sort("ga:source,ga:medium")
   checkEquals("ga:source,ga:medium", query$sort())
-
+  
   # Test passing a vector as a parameter.
   query$sort(c("ga:pageviews", "ga:visits"))
   checkEquals("ga:pageviews,ga:visits", query$sort())
-
-
+  
   # Test value is unset if input is NULL.
   query$sort(NULL)
   checkEquals(NULL, query$sort())
-
+  
   # Test vector format.
   sort.not.vector <- as.Date("1981-06-26", "%Y-%m-%d")
   checkException(query$sort(sort.not.vector), silent = TRUE)
-
+  
   # Test to check vector is character.
   sort.numeric <- c(1, 2, 3, 4, 5)
   checkException(query$sort(sort.numeric), silent = TRUE)
@@ -201,12 +197,12 @@ TestSort <- function() {
 # GA API return the filters error.
 TestFilters <- function() {
   query <- QueryBuilder()
-
+  
   # Test passing a valid string as a parameter.
   filter <- "ga:medium==referral;ga:source==google"
   query$filters(filter)
   checkEquals(filter, query$filters())
-
+  
   # Test value is unset if input is NULL.
   query$filters(NULL)
   checkEquals(NULL, query$filters())
@@ -216,18 +212,18 @@ TestFilters <- function() {
 # MaxResults() is an optional parameter.
 TestMaxResults <- function() {
   query <- QueryBuilder()
-
+  
   # Test passing a valid number as a parameter.
   query$max.results(5000)
   checkEquals(5000, query$max.results())
-
+  
   # Test value is unset if input is NULL.
   query$max.results(NULL)
   checkEquals(NULL, query$max.results())
-
+  
   # Test that vectors are not allowed.
   checkException(query$max.results(c(1, 2, 3)), silent = TRUE)
-
+  
   # Test that strings are not allowed.
   checkException(query$max.results("3000"), silent = TRUE)
 }
@@ -236,18 +232,18 @@ TestMaxResults <- function() {
 # StartIndex() is an optional parameter.
 TestStartIndex <- function() {
   query <- QueryBuilder()
-
+  
   # Test passing a valid number as a parameter.
   query$start.index(1000)
   checkEquals(1000, query$start.index())
-
+  
   # Test value is unset if input is NULL.
   query$start.index(NULL)
   checkEquals(NULL, query$start.index())
-
+  
   # Test that vectors are not allowed.
   checkException(query$start.index(c(1, 2, 3)), silent = TRUE)
-
+  
   # Test that strings are not allowed.
   checkException(query$start.index("1000"), silent = TRUE)
 }
@@ -255,23 +251,22 @@ TestStartIndex <- function() {
 # Tests for the TableID() function within the QueryBuilder() class.
 TestTableID <- function() {
   query <- QueryBuilder()
-
+  
   # Test passing a valid string as a parameter.
   query$table.id("ga:1174")
   checkEquals("ga:1174", query$table.id())
-
+  
   # Test value is unset if input is NULL.
   query$table.id(NULL)
   checkEquals(NULL, query$table.id())
-
+  
   # Test that vectors are not allowed.
   checkException(query$table.id(c("ga:1234", "ga:567")), silent = TRUE)
-
-
+  
   # Test vector format.
   table.id.not.vector <- as.Date("1981-06-26", "%Y-%m-%d")
   checkException(query$table.id(table.id.not.vector), silent = TRUE)
-
+  
   # Test to check numerics are not allowed.
   checkException(query$table.id(1174), silent = TRUE)
 }
@@ -280,8 +275,8 @@ TestTableID <- function() {
 # This assumes the parameters pass the parameter tests.
 TestToUri <- function() {
   expected.uri <- paste("https://www.googleapis.com/analytics/v3/data/ga",
-                        "?start-date=2010%2D05%2D01",
-                        "&end-date=2010%2D05%2D31",
+                        "?start-date=2010-05-01",
+                        "&end-date=2010-05-31",
                         "&dimensions=ga%3Adate",
                         "&metrics=ga%3Avisits",
                         "&segment=dynamic%3A%3Aga%3Amedium%3D%3Dorganic",
@@ -291,7 +286,7 @@ TestToUri <- function() {
                         "&start-index=25",
                         "&ids=ga%3A30661272",
                         sep = "")
-
+  
   # Build the query.
   query <- QueryBuilder()
   query$start.date("2010-05-01")
@@ -304,11 +299,11 @@ TestToUri <- function() {
   query$max.results(10000)
   query$start.index(25)
   query$table.id("ga:30661272")
-
+  
   checkEquals(expected.uri, query$to.uri())
-
+  
   # Test setting parameters to NULL do not end up in the final URL.
-
+  
   query$start.date(NULL)
   query$end.date(NULL)
   query$dimensions(NULL)
@@ -319,35 +314,35 @@ TestToUri <- function() {
   query$max.results(NULL)
   query$start.index(NULL)
   query$table.id(NULL)
-
+  
   checkEquals("https://www.googleapis.com/analytics/v3/data/ga?", query$to.uri())
 }
 
 # Tests for the Validate() function within the QueryBuilder() class.
 # NOTE: This is not the same as the parameters being incorrect.
 TestValidate <- function() {
-
+  
   # Missing start.date.
   builder <- QueryBuilder()
   builder$end.date("2010-05-31")
   builder$metrics("ga:visitors")
   builder$table.id("ga:30661272")
   checkException(builder$validate(), silent = TRUE)
-
+  
   # Missing end.date.
   builder <- QueryBuilder()
   builder$start.date("2010-05-01")
   builder$metrics("ga:visitors")
   builder$table.id("ga:30661272")
   checkException(builder$validate(), silent = TRUE)
-
+  
   # Missing metrics.
   builder <- QueryBuilder()
   builder$start.date("2010-05-01")
   builder$end.date("2010-05-31")
   builder$table.id("ga:30661272")
   checkException(builder$validate(), silent = TRUE)
-
+  
   # Missing table.id.
   builder <- QueryBuilder()
   builder$start.date("2010-05-01")

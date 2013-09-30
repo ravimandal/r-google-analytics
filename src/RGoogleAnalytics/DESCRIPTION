@@ -10,10 +10,13 @@ Description: Allows a user to use the Google Analytics (GA) API to read
     allows you to: Create a new export object. Authenticate with your
     Google Account. Return an account profile for an authorized Google
     Account. Create a new API query Use the query to return a
-    data.frame populated with metrics.  It requires
-	RCurl and rjson packages. 
+    data.frame populated with metrics.  It requires	RCurl and rjson packages. 
 License: Apache License (==2.0)
 LazyLoad: yes
-Depends: rjson, RCurl
-Collate: 'QueryBuilder.R' 'RGoogleAnalytics.R' 'Configuration.R'
-Packaged: 2013-02-24 10:21:55 UTC; Michael.Pearmain
+LazyData: yes
+Suggests: RUnit
+Imports: rjson, RCurl
+Collate: 'QueryBuilder.R'
+         'RGoogleAnalytics.R'
+         'Configuration.R'
+         'RUnit_driver.R'

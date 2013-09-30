@@ -16,24 +16,19 @@
 # limitations under the License.
 
 # Run unit tests in R, for QueryBuilder.R
-# The driver file to execute is ./Runit_driver.R
-
-source("./R/Configuration.R")
-load("./man/ga.account.Rda")
+# The driver file to execute is ../R/Runit_driver.R
+load(system.file("ga.account.Rda", package = 'RGoogleAnalytics'))
 conf <- Configuration()
  
 TestParameterSelector <- function(){
   param.param <- NA
-  checkEquals("~all",conf$ParameterSelector(param.param) )
+  checkEquals("~all", conf$ParameterSelector(param.param) )
   param.param <- NULL
-  checkEquals(param.param,conf$ParameterSelector(param.param) )
+  checkEquals(param.param, conf$ParameterSelector(param.param) )
   param.param <- "54321"
-  checkEquals(param.param,conf$ParameterSelector(param.param) )
+  checkEquals(param.param, conf$ParameterSelector(param.param) )
 }
 
 TestDataFramepacker <- function(){
-  checkEquals(ga.account.df,conf$DataFramepacker(ga.account,"accounts"))
+  checkEquals(ga.account.df, conf$DataFramepacker(ga.account,"accounts"))
 }
-
-
-
